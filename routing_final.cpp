@@ -20,13 +20,13 @@
 
 #define MAX_EVENTS 10
 
-
 using namespace std;
 
 unordered_map<int, bool> socket_active;
-    unordered_map<string, pair<int, int>> conn_map;
-    unordered_map<int, string> response_map; 
-   unordered_map<int, string> helper_map;
+unordered_map<string, pair<int, int>> conn_map;
+unordered_map<int, string> response_map; 
+unordered_map<int, string> helper_map;
+
 struct connection
 {
     string src_ip;
@@ -40,111 +40,65 @@ struct connection
 
 void send_file(string file_name, int dest, int src, int dest_socket, int src_socket, int dir)
 {
-	cout << file_name << " thread\n";
-	for(auto i : response_map)
-		cout << i.first << " " << i.second << "\n";
-	
-string response_msg = response_map[src];
-cout << response_msg << "yello\n";
-
-string cmd = "sudo clamdscan --fdpass " + file_name;
-        int virus_detected;
- 	do {
+	string response_msg = response_map[src];
+    string cmd = "sudo clamdscan --fdpass " + file_name;
+    int virus_detected;
+ 	do 
+    {
         virus_detected = system(cmd.c_str());
     } while (virus_detected == -1 && errno == EINTR);
+
     FILE* file = fopen(file_name.c_str(), "rb");
+
     try
     {
-	if(virus_detected)
-		throw runtime_error("426 Virus Detected");
+	    if(virus_detected)
+		    throw runtime_error("426 Virus Detected");
 	
-		cout << "FILE is VIRUS free\n";
         char buffer[1024] = "";
         int x = fread(buffer, 1, 1024, file);
         while(x)
         {
-            printf("sending from thread 1 %s", buffer);
             if(send(dest_socket, buffer, x, 0) < 0)
-		perror("Error thread send");
+		        perror("Error thread send");
             x = fread(buffer, 1, 1024, file);
         }  
-        cout << "hulu" + response_map[src] << "\n";
 
-while(dir && response_map[src].find("150") == 0);
-    // cout << "looping\n";
-    cout << response_map[src] << "ayyo\n";
-        cout << "sending from thread" + response_map[src] << "\n";
+        while(dir && response_map[src].find("150") == 0);
         close(dest_socket);
-	close(src_socket);
-    if(dir)
-        send(src, response_map[src].c_str(), response_map[src].length(), 0);
+	    close(src_socket);
+        
+        if(dir)
+            send(src, response_map[src].c_str(), response_map[src].length(), 0);
 
         fclose(file);
 	
         remove(file_name.c_str());
-	socket_active[src] = true;
+	    socket_active[src] = true;
         socket_active[dest] = true;
-	cout << "list\n";
-	for(auto i : socket_active)
-		cout << i.first << " " << i.second << "\n";
     }
 
     catch(const std::exception& e)
     {
-	printf("EXCEPTION RAISED IN THREAD: %s\n", e.what());
+	    while(dir && response_map[src].find("150") == 0);
+	    send(src, "1451 VIRUS DETECTED.\n\0", strlen("1451 VIRUS DETECTED.\n\0"), 0);
 
-cout << "|" << response_msg << " | " << response_map[src] << " | finale\n"; 
-        //sleep(5);
-	cout << "mulu" + response_map[src] << "\n";
-	while(dir && response_map[src].find("150") == 0);
-		// cout << "looping\n";
-	int t = send(src, "1451 VIRUS DETECTED.\n\0", strlen("1451 VIRUS DETECTED.\n\0"), 0);
-    // if(!dir)
-    // {
-    //     fseek(file, 0, SEEK_END);
-    //     int sz = ftell(file);
-    //     char t_buffer[1024] = "";
-    //     memset(t_buffer, '.', 1024);
-    //     strcpy(t_buffer, "VIRUS DETECTED!!!");
-    //     int sent = 0;
-    //     while(sent < sz)
-    //     {
-    //         sent += send(dest_socket, t_buffer, min(1024, sz - sent), 0);
-    //     }
-    // }
-
-    if(dir)
-    {
-        socket_active[src] = true;
-        cout << t << "t\n";
-
-	socket_active[dest] = true;
-    }
-	cout << t << "t\n";
+        if(dir)
+        {
+            socket_active[src] = true;
+            socket_active[dest] = true;
+        }
     	close(dest_socket);
-cout << t << "t\n";
-
         close(src_socket);
-cout << t << "t\n";
-    while(!dir && response_map[src].find("150") == 0);
-		//perror("this is the last stretch");
-    if(!dir){
 
-    
-	socket_active[src] = true;
-        cout << t << "t\n";
-
-	socket_active[dest] = true;
-	cout << t << "t\n";
-    }
-        //fclose(file);
-cout << t << "t\n";
-
-
-
+        while(!dir && response_map[src].find("150") == 0);
+		if(!dir)
+        {
+            socket_active[src] = true;
+            socket_active[dest] = true;
+        }
+        
         remove(file_name.c_str());
-
-	cout << "done terminating\n";
     }
 }
 
@@ -172,7 +126,7 @@ int main(int argc, char* args[])
     char* ip = args[1];
     int port = htons(atoi(args[2]));
 
-	 sockaddr_in* router_addr = new sockaddr_in();
+	sockaddr_in* router_addr = new sockaddr_in();
     int addr_len = sizeof(*router_addr);
     int router_socket;
     router_addr->sin_family = AF_INET;
@@ -229,19 +183,16 @@ int main(int argc, char* args[])
     char addr_str[INET_ADDRSTRLEN];
     while(1)
     {
-	    // printf("magane\n");
         int nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         while (nfds == -1) 
         {
             nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-	}
-	    printf("mahisha\n");
+	    }
 
         for (int n = 0; n < nfds; ++n) 
         {
             if (((connection*)events[n].data.ptr)->trigger == router_socket) 
             {
-                printf("router_socket\n");
                 client_socket = accept(router_socket, (struct sockaddr *)&client_addr, (socklen_t*)&addr_len);
                 if(client_socket < 0) 
                 {
@@ -309,13 +260,11 @@ int main(int argc, char* args[])
                 int s_socket, d_socket;
                 if(((connection*)events[n].data.ptr)->trigger == ((connection*)events[n].data.ptr)->src_socket)
                 {
-	                printf("client_socket\n");
                     s_socket = ((connection*)events[n].data.ptr)->src_socket;
                     d_socket = ((connection*)events[n].data.ptr)->dst_socket;
                 }
                 else 
                 {
-		            printf("server_socket\n");
                     s_socket = ((connection*)events[n].data.ptr)->dst_socket;
                     d_socket = ((connection*)events[n].data.ptr)->src_socket;
                 }
@@ -324,93 +273,60 @@ int main(int argc, char* args[])
                 int x = recv(s_socket, buffer, 1024, 0);
                 if(x > 0)
                 {
-                    printf("buffer: %s\n", buffer);
-			response_map[d_socket].assign(buffer, buffer + x);
+			        response_map[d_socket].assign(buffer, buffer + x);
                     if(socket_active[s_socket])
-			{
-                for(auto i : socket_active)
-                    cout << i.first << " " << i.second << "\n";
-                cout << "xxxyyyxxx\n";
-                cout << s_socket << " " << d_socket << "\n";
-                printf("sending from outside %s", buffer);
-                        send(d_socket, buffer, x, 0);
-if(((connection*)events[n].data.ptr)->dst_port == 21){
-			//response_map[d_socket].assign(buffer, buffer + x);
-                        cout << d_socket << response_map[d_socket] << socket_active[d_socket] << "yallah\n";}
-			cout << "prathamanyasan\n";			
-for(auto i : socket_active)
-				cout << i.first << " " << i.second << "\n";
-			}
+                        send(d_socket, buffer, x, 0);			
                     else if(((connection*)events[n].data.ptr)->dst_port != 21)
                     {
                         string file_name = ((connection*)events[n].data.ptr)->dst_ip + ":" + to_string(((connection*)events[n].data.ptr)->dst_port) + ":" + ((connection*)events[n].data.ptr)->src_ip;
-                        cout << "writing to file" << file_name << "\n";
-			FILE* file = fopen(file_name.c_str(), "ab");
+			            FILE* file = fopen(file_name.c_str(), "ab");
                         if(fwrite(buffer, 1, x, file) != x)
-				perror("fwriet error");
+				            perror("fwrite error");
                         fclose(file);
 			
                     }
                 }
                 else if(x == 0)
                 {
-			        printf("terminating\n");
                     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, s_socket, NULL);
                     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, d_socket, NULL);
 
                     if(((connection*)events[n].data.ptr)->dst_port != 21)
                     {
-                        printf("data connection\n");
                         string file_name = ((connection*)events[n].data.ptr)->dst_ip + ":" + to_string(((connection*)events[n].data.ptr)->dst_port) + ":" + ((connection*)events[n].data.ptr)->src_ip;
                         auto conn_sockets = conn_map[file_name];
                         conn_map.erase(file_name);
                         socket_active.erase(s_socket);
                         socket_active.erase(d_socket);
-			for(auto i : response_map)
-			{
-				cout << i.first << ":" << i.second;
-			}
-                        printf("%d %d\n", conn_sockets.first, conn_sockets.second);
-			printf("%d\n", response_map[conn_sockets.second].find("226"));
-			if(response_map[conn_sockets.second].find("150") == 0)
-			{
-				
-				printf("take_all\n");
-				for(auto i : response_map)
-					cout << i.first << " " << i.second << "\n";
-                cout << conn_sockets.second << " " << conn_sockets.first << "\n";
-                if(response_map[conn_sockets.first].find("STOR") == 0)
-                {
-                    thread t1(send_file, file_name, conn_sockets.first, conn_sockets.second, d_socket, s_socket, 0);
-			        t1.detach();
-                    cout << "activate STORE\n";
-                }
-                else
-                {
-                    thread t1(send_file, file_name, conn_sockets.first, conn_sockets.second, d_socket, s_socket, 1);
-			        t1.detach();
-                    cout << "activate not STORE\n";
-                }
+			            if(response_map[conn_sockets.second].find("150") == 0)
+			            {
+                            if(response_map[conn_sockets.first].find("STOR") == 0)
+                            {
+                                thread t1(send_file, file_name, conn_sockets.first, conn_sockets.second, d_socket, s_socket, 0);
+			                    t1.detach();
+                            }
+                            else
+                            {
+                                thread t1(send_file, file_name, conn_sockets.first, conn_sockets.second, d_socket, s_socket, 1);
+			                    t1.detach();
+                            }
                 
-}
-
+                        }
                         else if(response_map[conn_sockets.second].find("226") == 0)
                         {
-                            printf("take1\n");
-                            // thread t1(send_file, file_name, conn_sockets, d_socket, response_map[s_socket]);
+
                         }
                         else
                         {
-                            printf("take2\n");
                             strcpy(buffer, "426 Virus Detected");
-                            printf("sending from outside %s", buffer);
                             send(conn_sockets.first, buffer, strlen(buffer), 0);
                         }
-                        // response_map.erase(conn_sockets.second);
                     }
-			else{
-                    close(s_socket);
-                    close(d_socket);}
+			        else
+                    {
+                        close(s_socket);
+                        close(d_socket);
+                    }
                 }
                 else 
                 {
@@ -423,29 +339,16 @@ for(auto i : socket_active)
                     strcpy(temp, buffer);
                     strtok(temp, "|||");
                     char* temp_str = strtok(NULL, "|");
-                    printf("%s\n", temp_str);
-                    cout << "epsv\n";
-                    for(auto i: conn_map)
-                        cout << i.first << "\n";
-                    cout << "epsv_end\n";
                     conn_map[((connection*)events[n].data.ptr)->dst_ip + ":" + string(temp_str) + ":" + ((connection*)events[n].data.ptr)->src_ip] = {s_socket, d_socket};
                     helper_map[((connection*)events[n].data.ptr)->dst_socket] = string(temp_str);
-                    for(auto i: conn_map)
-                        cout << i.first << "\n";
-                    cout << "epsv_end_end\n";
-		}
-                else if(((connection*)events[n].data.ptr)->dst_port == 21 && (!strncmp(buffer, "150", 3) ))
+		        }
+                else if(((connection*)events[n].data.ptr)->dst_port == 21 && (!strncmp(buffer, "150", 3)))
                 {
-                    for(auto i : helper_map)
-                        cout << "gante" << i.first << "\n";
-                    cout << ((connection*)events[n].data.ptr)->dst_socket << "\n";
-			cout << "yaasthee praja" << ((connection*)events[n].data.ptr)->dst_ip + ":" + helper_map[((connection*)events[n].data.ptr)->dst_socket]  + ":" + ((connection*)events[n].data.ptr)->src_ip << "\n";
-			int a = conn_map[((connection*)events[n].data.ptr)->dst_ip + ":" + helper_map[((connection*)events[n].data.ptr)->dst_socket] + ":" + ((connection*)events[n].data.ptr)->src_ip].first;
-			int b = conn_map[((connection*)events[n].data.ptr)->dst_ip + ":" + helper_map[((connection*)events[n].data.ptr)->dst_socket] + ":" + ((connection*)events[n].data.ptr)->src_ip].second;
+			        int a = conn_map[((connection*)events[n].data.ptr)->dst_ip + ":" + helper_map[((connection*)events[n].data.ptr)->dst_socket] + ":" + ((connection*)events[n].data.ptr)->src_ip].first;
+			        int b = conn_map[((connection*)events[n].data.ptr)->dst_ip + ":" + helper_map[((connection*)events[n].data.ptr)->dst_socket] + ":" + ((connection*)events[n].data.ptr)->src_ip].second;
                     socket_active[a] = false;
                     socket_active[b] = false;
-                cout << "deva" << a << " " << b << " " << socket_active[a] << " " << socket_active[b] << "\n";
-		}
+                }
             }
         }
     }
